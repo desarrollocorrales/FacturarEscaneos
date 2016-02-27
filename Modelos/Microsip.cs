@@ -88,7 +88,7 @@ namespace FacturarEscaneos.Modelos
 
                             ApiBas.DBDisconnect(iHandlerMetadatos);
                             Logger.AgregarLog("Desconexión Metadatos iHandlerMetadatos: " + iHandlerMetadatos);
-                            lblAccion.Text = "Desconexión Metadatos iHandlerMetadatos: ";
+                            lblAccion.Text = "Desconexión Metadatos iHandlerMetadatos...";
                             Application.DoEvents();
 
                             return true;

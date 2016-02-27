@@ -1,10 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Data;
-using System.Drawing;
-using System.Linq;
-using System.Text;
 using System.Windows.Forms;
 using FacturarEscaneos.Modelos;
 
@@ -26,6 +20,10 @@ namespace FacturarEscaneos.GUIS
             Microsip.sUser = @"SYSDBA";
             Microsip.sPass = @"PIARPE";
             Microsip.ComprobarCompatibilidad(lblAccion);
+
+            this.Hide();
+            new Frm_Principal().ShowDialog();
+            this.Close();
         }
     }
 }

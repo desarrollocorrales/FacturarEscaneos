@@ -42,7 +42,6 @@
             this.lblAccion.Padding = new System.Windows.Forms.Padding(0, 2, 0, 0);
             this.lblAccion.Size = new System.Drawing.Size(641, 57);
             this.lblAccion.TabIndex = 0;
-            this.lblAccion.Text = "lblAccion";
             this.lblAccion.TextAlign = System.Drawing.ContentAlignment.TopCenter;
             // 
             // lblTitulo
@@ -69,7 +68,7 @@
             this.Controls.Add(this.lblAccion);
             this.Font = new System.Drawing.Font("Tahoma", 11.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.None;
-            this.Margin = new System.Windows.Forms.Padding(4, 4, 4, 4);
+            this.Margin = new System.Windows.Forms.Padding(4);
             this.Name = "Frm_Splash";
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
             this.Text = "Frm_Splash";

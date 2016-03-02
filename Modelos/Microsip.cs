@@ -124,7 +124,8 @@ namespace FacturarEscaneos.Modelos
         }
         public static void DesconectarTodo()
         {
-            ApiBas.DBDisconnect(-1);
+            ApiBas.DBDisconnect(iHandlerDB);
+            ApiBas.DBDisconnect(iHandlerMetadatos);
         }
 
         private static void CaptarErrorApiBas(MetodoApiBas metodo, int iError)

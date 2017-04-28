@@ -15,7 +15,7 @@ namespace FacturarEscaneos.GUIS
         {
             Application.DoEvents();
 
-            Microsip.sPathBD = @"Servidorx:C:\Microsip datos\Libertad.FDB";
+            Microsip.sPathBD = @"Servidorx:C:\Microsip datos\ABASTECEDORA.FDB";
             Microsip.sPathMetadatos = @"Servidorx:C:\Microsip datos\System\Metadatos.FDB";
             Microsip.sUser = @"SYSDBA";
             Microsip.sPass = @"PIARPE";

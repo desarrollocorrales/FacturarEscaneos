@@ -56,9 +56,9 @@ namespace FacturarEscaneos.Modelos
                     lblAccion.Text = "Se asigna la conexion al modulo de ventas";
                     Application.DoEvents();
 
-                    ApiVe.SetReglasPedidos(0, 0, 0);
-                    Logger.AgregarLog("Asignar manejo de reglas para ApiVentas SetReglasPedidos(0, 0, 0). No comprometer Unidades");
-                    lblAccion.Text = "Asignar manejo de reglas para ApiVentas SetReglasPedidos(0, 0, 0). No comprometer Unidades";
+                    ApiVe.SetReglasPedidos(1, 1, 1);
+                    Logger.AgregarLog("Asignar manejo de reglas para ApiVentas SetReglasPedidos(1, 1, 1). Comprometer Unidades");
+                    lblAccion.Text = "Asignar manejo de reglas para ApiVentas SetReglasPedidos(1, 1, 1). Comprometer Unidades";
                     Application.DoEvents();
 
                     ApiVe.veSetErrorHandling(0, 0);
@@ -124,11 +124,50 @@ namespace FacturarEscaneos.Modelos
         }
         public static void DesconectarTodo()
         {
-            ApiBas.DBDisconnect(iHandlerDB);
-            ApiBas.DBDisconnect(iHandlerMetadatos);
+            ApiBas.DBDisconnect(-1);
         }
 
-        private static void CaptarErrorApiBas(MetodoApiBas metodo, int iError)
+        public static bool NuevoPedido(string fecha, string folio, int cliente_ID, string descripcion)
+        {
+            int iError = ApiVe.NuevoPedido(fecha, folio, cliente_ID, 0, 0, "", "P", 0, "", descripcion, 0, 0, 0, 0);
+
+            if (iError != 0)
+            {
+                Logger.AgregarLog("Ocurrió un error de ventas. Código:" + iError);
+                CaptarErrorApiVe(MetodoApiVe.NuevoPedido, iError);
+                return false;
+            }
+            
+            return true;
+        }
+        public static bool NuevoRenglon(int articulo_ID, double cantidad, string nota)
+        {
+            int iError = ApiVe.RenglonPedido(articulo_ID, cantidad, -1, -1, nota);
+
+            if (iError != 0)
+            {
+                Logger.AgregarLog("Ocurrió un error de ventas. Código:" + iError);
+                CaptarErrorApiVe(MetodoApiVe.RenglonPedido, iError);
+                return false;
+            }
+
+            return true;
+        }
+        public static bool AplicarPedido()
+        {
+            int iError = ApiVe.AplicaPedido();
+
+            if (iError != 0)
+            {
+                Logger.AgregarLog("Ocurrió un error de ventas. Código:" + iError);
+                CaptarErrorApiVe(MetodoApiVe.AplicaPedido, iError);
+                return false;
+            }
+
+            return true;
+        }
+
+        public static void CaptarErrorApiBas(MetodoApiBas metodo, int iError)
         {
             String sbErrorMessage = String.Empty;
 
@@ -153,7 +192,7 @@ namespace FacturarEscaneos.Modelos
             Logger.AgregarLog(Mensaje);
 
         }
-        private static void CaptarErrorApiVe(MetodoApiVe metodo, int iError)
+        public static string CaptarErrorApiVe(MetodoApiVe metodo, int iError)
         {
             String sbErrorMessage = String.Empty;
 
@@ -208,10 +247,29 @@ namespace FacturarEscaneos.Modelos
                         case 99: sbErrorMessage = "Error de Api Básica"; break;
                     }
                     break;
+
+                case MetodoApiVe.RenglonPedido:
+                    switch (iError)
+                    {
+                        case 1: sbErrorMessage = "No hay factura en proceso."; break;
+                        case 2: sbErrorMessage = "Artículo inexistente."; break;
+                        case 3: sbErrorMessage = "Valor de Unidades fuera de rango."; break;
+                        case 4: sbErrorMessage = "Valor de Precio unitario fuera de rango."; break;
+                        case 5: sbErrorMessage = "Valor de Porcentaje de descuento fuera de rango."; break;
+                        case 6: sbErrorMessage = "Unidades fraccionarias en artículo de series."; break;
+                        case 7: sbErrorMessage = "El descuento excede al máximo autorizado."; break;
+                        case 8: sbErrorMessage = "El precio es menor al mínimo permitido"; break;
+                        case 98: sbErrorMessage = "Alguno de los datos foráneos del pedido está siendo modificado por otro usuario"; break;
+                        case 99: sbErrorMessage = "Error de Api Básica"; break;
+                    }
+                    break;
             }
 
             var Mensaje = string.Format("ApiVentas... Codigo de error: {0} | Mensaje del error: {1}", iError, sbErrorMessage);
             Logger.AgregarLog(Mensaje);
+
+            MessageBox.Show(Mensaje);
+            return sbErrorMessage;
         }
     }
 }

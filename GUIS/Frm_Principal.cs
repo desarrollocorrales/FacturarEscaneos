@@ -30,6 +30,7 @@ namespace FacturarEscaneos.GUIS
         {
             if (cbEscaneo.Items.Count!=0)
                 cbEscaneo.SelectedIndex = 0;
+
             dtpFecha.Value = DateTime.Now;
             cbIndex = -99;
             lstSalidasSeleccionadas = new List<string>();
@@ -42,10 +43,17 @@ namespace FacturarEscaneos.GUIS
             {
                 MySQL_DAL myDAL = new MySQL_DAL();
                 var lstCodigosDeSalida = new List<string>();
-                lstCodigosDeSalida.Add("- Seleccione un código -");
                 lstCodigosDeSalida.AddRange(myDAL.getSalidasPorDia(dtpFecha.Value.Date));
 
-                cbEscaneo.DataSource = lstCodigosDeSalida;
+                if (lstCodigosDeSalida.Count > 0)
+                {
+                    cbEscaneo.DataSource = lstCodigosDeSalida;
+
+                    cbEscaneo.SelectedIndex = 1;
+                    cbEscaneo.SelectedIndex = 0;
+                    gridEscaneos.DataSource = lstCodigosDeSalida;
+                }
+                
             }
             catch (Exception ex)
             {
@@ -89,17 +97,14 @@ namespace FacturarEscaneos.GUIS
         {
             try
             {
-                if (cbEscaneo.SelectedIndex != 0)
-                {
-                    var salidaSeleccionada = Convert.ToString(cbEscaneo.SelectedItem);
-                    lstSalidasSeleccionadas.Add(salidaSeleccionada);
-                    lstSalidasSeleccionadas = lstSalidasSeleccionadas.Distinct().ToList();
-                    Logger.AgregarLog(string.Format("Se agregó la salida {0} a la lista...", salidaSeleccionada));
+                var salidaSeleccionada = Convert.ToString(cbEscaneo.SelectedItem);
+                lstSalidasSeleccionadas.Add(salidaSeleccionada);
+                lstSalidasSeleccionadas = lstSalidasSeleccionadas.Distinct().ToList();
+                Logger.AgregarLog(string.Format("Se agregó la salida {0} a la lista...", salidaSeleccionada));
 
-                    listSalidas.DataSource = lstSalidasSeleccionadas;
-                }
+                listSalidas.DataSource = lstSalidasSeleccionadas;
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 Logger.AgregarLog(ex.ToString());
                 MessageBox.Show(ex.Message);
@@ -189,6 +194,136 @@ namespace FacturarEscaneos.GUIS
 
             if (cbSucursales.Items.Count > 0)
                 cbSucursales.SelectedIndex = 0;
+        }
+
+        private void btnCrearPedido_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                CrearPedido();
+            }
+            catch (Exception ex)
+            {
+                Logger.AgregarLog(ex.ToString());
+                MessageBox.Show(ex.Message);
+            }
+        }
+        private void CrearPedido()
+        {
+            Logger.AgregarLog("Obtener fecha...");
+            DateTime dtFecha = getFechaServer();
+
+            Logger.AgregarLog("Obtener Lista de Artículos...");
+            List<Articulo> lstArticulos = getListaArticulosMicrosip();
+
+
+            Logger.AgregarLog("Obtener Sucursal Cliente");
+            var oSucursal = (Sucursal)cbSucursales.SelectedItem;
+            var lstRenglonesPedido = (List<VistaPrevia>)gridDetallesSalidas.DataSource;
+
+            string sFecha = dtFecha.ToString("dd/MM/yyyy");
+            string sFolio = txbFolio.Text;
+
+            bool bExito = false;
+
+            Logger.AgregarLog("--------------------    INICIA EL PEDIDO    --------------------");
+            Logger.AgregarLog("Fecha del Pedido: " + sFecha);
+            Logger.AgregarLog("Folio del Pedido: " + sFolio);
+            Logger.AgregarLog("Cliente del Pedido: " + oSucursal.sNombre + " - " + oSucursal.iID);
+            Logger.AgregarLog("Invocar al Metodo 'Nuevo Pedido'");
+            bExito = Microsip.NuevoPedido(sFecha, sFolio, oSucursal.iID, "Descripcion de pedido automatico");
+            if (bExito == true)
+            {
+                //Se creó el encabezado con exito
+                bool bExitoRenglones = true;
+                Logger.AgregarLog("   El encabezado se creó con Exito");
+                foreach (VistaPrevia renglonPedido in lstRenglonesPedido)
+                {
+                    Logger.AgregarLog("      Invocar al Metodo 'Nuevo Renglon'");
+                    var articulo = lstArticulos.FirstOrDefault(o => o.sClave == renglonPedido.sClaveArticulo);
+                    Logger.AgregarLog("        Articulo a ingresar: " + articulo.sNombre);
+                    var cantidad = Convert.ToDouble(renglonPedido.dCantidad);
+                    Logger.AgregarLog("        Cantidad a ingresar: " + cantidad.ToString("n"));
+
+                    bExito = Microsip.NuevoRenglon(articulo.iID, cantidad, string.Empty);
+                    if (bExito == true)
+                    {
+                        Logger.AgregarLog("      ¡Renglon agregado con exito!");
+                    }
+                    else
+                    {
+                        Logger.AgregarLog("      Error al invocar el metodo 'Nuevo Renglon'");                        
+                        bExitoRenglones = false;
+                        //MessageBox.Show("Error al invocar el metodo 'Nuevo Renglon'"); 
+                        break;
+                    }
+                }
+                if (bExitoRenglones == true)
+                {
+                    Logger.AgregarLog("          Invocar al Metodo 'Aplicar Pedido'");
+                    bExito = Microsip.AplicarPedido();
+                    if (bExito == false)
+                    {
+                        Logger.AgregarLog("          Error al invocar el método 'Aplicar Pedido'");
+                    }
+                }                
+            }
+            else
+            {
+                //No se pudo crear el encabezado
+                Logger.AgregarLog("Error al invocar el metodo 'Nuevo Pedido' ");
+                //MessageBox.Show("Error al invocar el metodo 'Nuevo Pedido' "); 
+            }
+            Logger.AgregarLog("--------------------    TERMINA EL PEDIDO    --------------------");
+        }
+        private List<Articulo> getListaArticulosMicrosip()
+        {
+            List<Articulo> lstArticulos = new List<Articulo>();
+            try
+            {
+                FBDAL fbdal = new FBDAL();
+                var lstArticulosDePedido = (List<VistaPrevia>)gridDetallesSalidas.DataSource;
+
+                lstArticulos = fbdal.getArticulos(lstArticulosDePedido);
+            }
+            catch (Exception ex)
+            {
+                Logger.AgregarLog(ex.ToString());
+                MessageBox.Show(ex.Message);
+            }
+            return lstArticulos;
+        }
+        private DateTime getFechaServer()
+        {
+            DateTime Fecha = new DateTime();
+            try
+            {
+                FBDAL fbdal = new FBDAL();
+                Fecha = fbdal.getFechaServer();
+            }
+            catch (Exception ex)
+            {
+                Logger.AgregarLog(ex.ToString());
+                MessageBox.Show(ex.Message);
+            }
+            return Fecha;
+        }
+
+        private void gvEscaneos_DoubleClick(object sender, EventArgs e)
+        {
+            AgregarSalida();
+        }
+
+        private void listSalidas_DoubleClick(object sender, EventArgs e)
+        {
+            QuitarSalida();
+        }
+
+        private void listSalidas_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            var sCodigo = Convert.ToString(listSalidas.SelectedItem);
+
+            CargarGridDetalles(sCodigo);
         }
     }
 }
